@@ -18,3 +18,5 @@ web/node_modules
 .playwright-mcp
 supabase/.temp
 supabase/.branches
+.vercel
+.env*.local

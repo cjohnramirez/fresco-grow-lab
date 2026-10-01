@@ -16,25 +16,36 @@
 #define TEMPERATURE_CONVERSION_DELAY_MS 750UL
 #endif
 
+// Credentials live in include/secrets.h, which is gitignored. Copy
+// include/secrets.example.h to include/secrets.h and fill it in. Without it the
+// firmware still builds, but it skips Wi-Fi and uploads (placeholders below).
+// Kit builds (-DFRESCO_KIT=1) ignore these and are configured over USB.
+#if defined(__has_include)
+#if __has_include("secrets.h")
+#include "secrets.h"
+#endif
+#endif
+
 // Wi-Fi network (must have internet access) the device joins to reach Supabase.
 #ifndef WIFI_SSID
-#define WIFI_SSID "FrescoGreenovation"
+#define WIFI_SSID ""
 #endif
 
 #ifndef WIFI_PASSWORD
-#define WIFI_PASSWORD "CurlyLettuce"
+#define WIFI_PASSWORD ""
 #endif
 
 // Supabase project REST configuration.
 //   SUPABASE_URL      -> e.g. "https://abcdefgh.supabase.co" (no trailing slash)
-//   SUPABASE_ANON_KEY -> the project's anon/public API key
+//   SUPABASE_ANON_KEY -> the project's publishable (sb_publishable_...) or
+//                        legacy anon key. Never the secret/service_role key.
 //   SUPABASE_TABLE    -> table that receives the rows
 #ifndef SUPABASE_URL
-#define SUPABASE_URL "https://dfkofandnffbalkeccns.supabase.co"
+#define SUPABASE_URL ""
 #endif
 
 #ifndef SUPABASE_ANON_KEY
-#define SUPABASE_ANON_KEY "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRma29mYW5kbmZmYmFsa2VjY25zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI5NzI5NDMsImV4cCI6MjA5ODU0ODk0M30.b_FChyavpAh36am7bO0dAqqN7775vq2xQQOYBa2QeHs"
+#define SUPABASE_ANON_KEY ""
 #endif
 
 #ifndef SUPABASE_TABLE

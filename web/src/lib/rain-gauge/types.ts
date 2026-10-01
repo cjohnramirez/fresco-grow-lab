@@ -34,14 +34,14 @@ export type RainGaugeReading = RainGaugeReadingPacket & {
   id: string
   sessionId: string
   receivedAt: string
-  source: "ap" | "import" | "sample"
+  source: "ap" | "import" | "sample" | "usb"
   raw: string
 }
 
 export type RainGaugeSession = {
   id: string
   label: string
-  source: "ap" | "sample"
+  source: "ap" | "sample" | "usb"
   startedAt: string
   apBaseUrl: string
   mlPerTip: number | null

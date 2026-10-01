@@ -200,15 +200,28 @@ export function weekAnalysisToCsv(analysis: WeekAnalysisResult) {
   return rows(weekAnalysisHeaders, values)
 }
 
+// Filesystem-safe name that always ends in .csv.
+export function csvFilename(name: string) {
+  const base = name
+    .replace(/\.csv$/i, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+  return `${base || "export"}.csv`
+}
+
 export function downloadCsv(filename: string, content: string) {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8" })
+  // The BOM makes Excel open UTF-8 (e.g. the degree sign) correctly.
+  const blob = new Blob(["﻿", content], { type: "text/csv;charset=utf-8" })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement("a")
   anchor.href = url
-  anchor.download = filename
+  anchor.download = csvFilename(filename)
+  anchor.rel = "noopener"
   anchor.style.display = "none"
   document.body.appendChild(anchor)
   anchor.click()
   anchor.remove()
-  globalThis.setTimeout(() => URL.revokeObjectURL(url), 0)
+  // Revoking right away can make Chromium drop the `download` name and save
+  // the file under the blob's UUID with no extension. Give it time to start.
+  globalThis.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }

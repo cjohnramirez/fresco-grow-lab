@@ -6,7 +6,7 @@ export const rainGaugeSyncSchema = z.object({
   session: z.object({
     id: z.string().min(1),
     label: z.string().min(1),
-    source: z.enum(["ap", "sample"]),
+    source: z.enum(["ap", "sample", "usb"]),
     startedAt: z.string().datetime(),
     apBaseUrl: z.string().url(),
     mlPerTip: z.number().finite().positive().nullable(),
@@ -18,7 +18,7 @@ export const rainGaugeSyncSchema = z.object({
         id: z.string().min(1),
         sessionId: z.string().min(1),
         receivedAt: z.string().datetime(),
-        source: z.enum(["ap", "import", "sample"]),
+        source: z.enum(["ap", "import", "sample", "usb"]),
         raw: z.string(),
       })
     )
@@ -58,4 +58,17 @@ export function toSupabaseRainGaugeReading(
     rate_mm_per_hr: reading.rateMmPerHr,
     payload: JSON.parse(reading.raw),
   }
+}
+
+// The sync route accepts at most 5000 readings per request; stay well under it.
+export const SYNC_CHUNK_SIZE = 1000
+
+// Splits a session's readings into request-sized chunks. An empty session
+// still yields one empty chunk so the session row itself gets upserted.
+export function chunkReadings<T>(readings: T[], size = SYNC_CHUNK_SIZE) {
+  const chunks: T[][] = []
+  for (let index = 0; index < readings.length; index += size) {
+    chunks.push(readings.slice(index, index + size))
+  }
+  return chunks.length > 0 ? chunks : [[]]
 }

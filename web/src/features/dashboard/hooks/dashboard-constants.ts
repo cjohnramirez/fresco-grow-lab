@@ -19,3 +19,7 @@ export const INITIAL_WEEK_ANALYSIS_STATE: CloudState = {
 
 export const EMPTY_READINGS: NormalizedReading[] = []
 export const EMPTY_EVENTS: IrrigationEvent[] = []
+
+// Grow bags selectable in the Monitor view. Cloud mode filters Supabase rows by
+// bag_id; simulated mode generates a separate watering history per bag.
+export const BAG_IDS = ["bag-1", "bag-2", "bag-3"] as const

@@ -23,6 +23,11 @@ import { ChartSkeleton } from "@/features/dashboard/components/loading-states"
 import { chartConfig } from "@/features/dashboard/lib/dashboard-config"
 import { MetricCard } from "@/features/dashboard/components/metric-card"
 import { TemperatureChart } from "@/features/dashboard/components/temperature-chart"
+import {
+  SensorHealthCard,
+  ThermalPatternsSection,
+} from "@/features/dashboard/components/thermal-patterns"
+import type { SeriesRow } from "@/lib/experiment/patterns"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -51,6 +56,8 @@ import {
 import type {
   ChartRange,
   ExperimentSummary,
+  IrrigationEvent,
+  NormalizedReading,
   WeekAnalysisResult,
 } from "@/lib/experiment/types"
 import type {
@@ -76,6 +83,7 @@ function slope(value: number | null) {
 
 export function AnalyticsView({
   chartRange,
+  irrigationEvents,
   loadingState,
   onChartRangeChange,
   runWeekAnalysis,
@@ -83,9 +91,13 @@ export function AnalyticsView({
   summary,
   weekAnalysis,
   weekAnalysisState,
+  weekLoading,
   weekRange,
+  weekSeries,
+  readings,
 }: {
   chartRange: ChartRange
+  irrigationEvents: IrrigationEvent[]
   loadingState: DashboardLoadingState
   onChartRangeChange: (value: ChartRange) => void
   runWeekAnalysis: () => void
@@ -95,7 +107,10 @@ export function AnalyticsView({
   summary: ExperimentSummary | null
   weekAnalysis: WeekAnalysisResult | null
   weekAnalysisState: CloudState
+  weekLoading: boolean
   weekRange: { from: string; to: string }
+  weekSeries: SeriesRow[]
+  readings: NormalizedReading[]
 }) {
   const averageDailyUse = average(
     summary?.dailyWaterUse.map((row) => row.waterUseKg) ?? []
@@ -364,6 +379,19 @@ export function AnalyticsView({
           </CardContent>
         </Card>
       </div>
+
+      <div className="flex flex-col gap-1 pt-2">
+        <h2 className="text-base font-semibold">Thermal Patterns</h2>
+        <p className="text-sm text-muted-foreground">
+          Always the last 7 days, independent of the range tabs above.
+        </p>
+      </div>
+      <ThermalPatternsSection
+        events={irrigationEvents}
+        loading={weekLoading}
+        rows={weekSeries}
+      />
+      <SensorHealthCard readings={readings} />
     </div>
   )
 }

@@ -138,6 +138,28 @@ export async function clearRainGaugeData() {
   ])
 }
 
+// A session whose Supabase sync failed. Upserts are idempotent (reading ids are
+// primary keys), so a retry simply re-sends the whole session in chunks.
+export type RainGaugeSyncQueueEntry = {
+  id: string
+  session: RainGaugeSession
+  attempts: number
+  lastError: string
+  queuedAt: string
+}
+
+export async function queueRainGaugeSync(entry: RainGaugeSyncQueueEntry) {
+  await putMany("syncQueue", [entry])
+}
+
+export async function getRainGaugeSyncQueue() {
+  return readAll<RainGaugeSyncQueueEntry>("syncQueue")
+}
+
+export async function removeRainGaugeSyncQueueEntry(id: string) {
+  await transaction("syncQueue", "readwrite", (store) => store.delete(id))
+}
+
 export function createRainGaugeSessionId() {
   return `rain-${new Date().toISOString().replace(/[:.]/g, "-")}`
 }

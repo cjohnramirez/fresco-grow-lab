@@ -7,18 +7,29 @@ import type {
   CloudState,
   WeekAnalysisResponse,
 } from "@/features/dashboard/lib/dashboard-types"
+import type { TemperatureDataSource } from "@/features/telemetry/data-source"
+import {
+  deviceTemperatureStore,
+  simulatedTemperatureStore,
+} from "@/features/telemetry/temperature-stores"
 import { manilaLocalInputToIso } from "@/lib/experiment/irrigation"
-import type { WeekAnalysisResult } from "@/lib/experiment/types"
+import type {
+  SupabaseTemperatureRow,
+  WeekAnalysisResult,
+} from "@/lib/experiment/types"
+import { localWeekAnalysis } from "@/lib/telemetry/local-temperature"
 
 import { INITIAL_WEEK_ANALYSIS_STATE } from "./dashboard-constants"
 import { initialWeekRange, sendJson } from "./dashboard-api"
 
 export function useWeekAnalysis({
   bagId,
-  setSampleMode,
+  dataSource,
+  localRows,
 }: {
   bagId: string
-  setSampleMode: (enabled: boolean) => void
+  dataSource: TemperatureDataSource
+  localRows: SupabaseTemperatureRow[]
 }) {
   const [weekRange, setWeekRange] = React.useState(initialWeekRange)
   const [weekAnalysis, setWeekAnalysis] =
@@ -33,7 +44,6 @@ export function useWeekAnalysis({
   }, [])
 
   const runWeekAnalysis = React.useCallback(async () => {
-    setSampleMode(false)
     setWeekAnalysisState({
       status: "loading",
       message: "Parsing full week",
@@ -42,14 +52,25 @@ export function useWeekAnalysis({
     })
 
     try {
-      const payload = await sendJson<WeekAnalysisResponse>("/api/week-analysis", {
-        method: "POST",
-        body: JSON.stringify({
-          bagId,
-          from: manilaLocalInputToIso(weekRange.from),
-          to: manilaLocalInputToIso(weekRange.to),
-        }),
-      })
+      const from = manilaLocalInputToIso(weekRange.from)
+      const to = manilaLocalInputToIso(weekRange.to)
+      const payload: WeekAnalysisResponse =
+        dataSource === "cloud"
+          ? await sendJson<WeekAnalysisResponse>("/api/week-analysis", {
+              method: "POST",
+              body: JSON.stringify({ bagId, from, to }),
+            })
+          : localWeekAnalysis({
+              bagId,
+              events: (dataSource === "simulated"
+                ? simulatedTemperatureStore
+                : deviceTemperatureStore
+              ).getSnapshot().events,
+              from,
+              rows: localRows,
+              sessionId: `${dataSource}-week`,
+              to,
+            })
 
       if (!payload.ok) {
         throw new Error(payload.message)
@@ -74,7 +95,7 @@ export function useWeekAnalysis({
       })
       toast.error(message)
     }
-  }, [bagId, setSampleMode, weekRange])
+  }, [bagId, dataSource, localRows, weekRange])
 
   return {
     resetWeekAnalysis,

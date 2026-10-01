@@ -9,6 +9,25 @@
 
 #include "TemperatureConfig.h"
 
+#if FRESCO_KIT
+#include "FrescoKit.h"
+#endif
+
+// Connection settings: compile-time constants for the classic build, values
+// provisioned over USB and stored in NVS for kit builds (see FrescoKit.h).
+#if FRESCO_KIT
+static const char* KIT_FIRMWARE = "fresco-temperature-kit";
+static const char* wifiSsid() { return fresco_kit::config.wifiSsid.c_str(); }
+static const char* wifiPassword() { return fresco_kit::config.wifiPassword.c_str(); }
+static String supabaseUrl() { return fresco_kit::config.supabaseUrl; }
+static const char* supabaseKey() { return fresco_kit::config.supabaseKey.c_str(); }
+#else
+static const char* wifiSsid() { return WIFI_SSID; }
+static const char* wifiPassword() { return WIFI_PASSWORD; }
+static String supabaseUrl() { return String(SUPABASE_URL); }
+static const char* supabaseKey() { return SUPABASE_ANON_KEY; }
+#endif
+
 struct TemperatureBus {
   const char* id;
   uint8_t pin;
@@ -148,12 +167,16 @@ void connectWiFi() {
   if (WiFi.status() == WL_CONNECTED) {
     return;
   }
+  if (strlen(wifiSsid()) == 0) {
+    // Kit boards stream over USB until Wi-Fi is provisioned.
+    return;
+  }
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(wifiSsid(), wifiPassword());
 
   Serial.print("Connecting to Wi-Fi \"");
-  Serial.print(WIFI_SSID);
+  Serial.print(wifiSsid());
   Serial.print("\"");
 
   const unsigned long start = millis();
@@ -177,6 +200,11 @@ void uploadSample() {
     return;
   }
 
+  if (supabaseUrl().length() == 0 || strlen(supabaseKey()) == 0) {
+    // Kit boards without a database only stream over USB.
+    return;
+  }
+
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Skipping upload: Wi-Fi not connected.");
     return;
@@ -188,19 +216,28 @@ void uploadSample() {
   client.setInsecure();
 
   HTTPClient http;
-  const String url = String(SUPABASE_URL) + "/rest/v1/" + SUPABASE_TABLE;
+  const String url = supabaseUrl() + "/rest/v1/" + SUPABASE_TABLE;
 
   if (!http.begin(client, url)) {
     Serial.println("Upload failed: http.begin() returned false.");
     return;
   }
 
-  http.addHeader("apikey", SUPABASE_ANON_KEY);
-  http.addHeader("Authorization", String("Bearer ") + SUPABASE_ANON_KEY);
+  http.addHeader("apikey", supabaseKey());
+  // Legacy anon keys are JWTs and also go in Authorization. New
+  // sb_publishable_ keys are not JWTs and must only be sent as `apikey`.
+  if (strncmp(supabaseKey(), "sb_", 3) != 0) {
+    http.addHeader("Authorization", String("Bearer ") + supabaseKey());
+  }
   http.addHeader("Content-Type", "application/json");
   http.addHeader("Prefer", "return=minimal");
 
+#if FRESCO_KIT
+  const String body = String("{\"device_id\":\"") + fresco_kit::config.deviceId +
+                      "\",\"payload\":" + latestSample + "}";
+#else
   const String body = String("{\"payload\":") + latestSample + "}";
+#endif
   const int code = http.POST(body);
 
   if (code > 0) {
@@ -262,8 +299,18 @@ void sampleSensors() {
 }
 
 void setup() {
+#if FRESCO_KIT
+  // Config lines can exceed the default 256-byte RX buffer while the loop is
+  // busy waiting on a DS18B20 conversion.
+  Serial.setRxBufferSize(1024);
+#endif
   Serial.begin(TEMPERATURE_BAUD_RATE);
   delay(250);
+
+#if FRESCO_KIT
+  fresco_kit::load();
+  fresco_kit::sendInfo(KIT_FIRMWARE);
+#endif
 
   for (size_t i = 0; i < TEMPERATURE_BUS_COUNT; i++) {
     pinMode(buses[i].pin, INPUT_PULLUP);
@@ -284,9 +331,23 @@ void setup() {
 void loop() {
   const unsigned long now = millis();
 
+#if FRESCO_KIT
+  fresco_kit::poll(KIT_FIRMWARE);
+  if (fresco_kit::configChanged) {
+    // New Wi-Fi/Supabase settings: drop the old link and upload on the next pass.
+    fresco_kit::configChanged = false;
+    WiFi.disconnect(true);
+    lastPostMs = now - SUPABASE_POST_INTERVAL_MS;
+  }
+#endif
+
   if (now - lastSampleMs >= TEMPERATURE_SAMPLE_INTERVAL_MS) {
     lastSampleMs = now;
     sampleSensors();
+#if FRESCO_KIT
+    // One telemetry packet per line for the dashboard's Web Serial reader.
+    Serial.println(latestSample);
+#endif
   }
 
   if (now - lastPostMs >= SUPABASE_POST_INTERVAL_MS) {

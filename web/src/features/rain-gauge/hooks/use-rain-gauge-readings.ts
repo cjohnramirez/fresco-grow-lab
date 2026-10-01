@@ -66,6 +66,7 @@ export function useRainGaugeReadings({
         packet,
         raw,
         sessionId: session.id,
+        source: session.source === "usb" ? "usb" : "ap",
       })
 
       setReadings((current) => {
@@ -77,7 +78,7 @@ export function useRainGaugeReadings({
       setRawPackets((current) => [raw, ...current].slice(0, MAX_RAW_PACKETS))
       await saveRainGaugeReadings([reading])
     },
-    [session.id]
+    [session.id, session.source]
   )
 
   const resetReadings = React.useCallback(() => {

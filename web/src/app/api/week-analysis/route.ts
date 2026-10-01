@@ -18,7 +18,7 @@ const weekAnalysisSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient(request)
 
   if (!supabase) {
     return supabaseNotConfiguredResponse()

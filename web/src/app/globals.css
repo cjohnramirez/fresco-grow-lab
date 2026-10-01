@@ -65,11 +65,13 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.527 0.154 150.069);
-  --chart-1: oklch(0.527 0.154 150.069);
-  --chart-2: oklch(0.56 0.12 78);
-  --chart-3: oklch(0.55 0.13 28);
-  --chart-4: oklch(0.56 0.12 285);
-  --chart-5: oklch(0.57 0.13 340);
+  /* Colorblind-validated categorical order (adjacent CVD dE >= 8):
+     blue, orange, aqua, yellow, magenta. */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -102,11 +104,11 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.723 0.219 149.579);
-  --chart-1: oklch(0.723 0.219 149.579);
-  --chart-2: oklch(0.76 0.14 78);
-  --chart-3: oklch(0.72 0.15 28);
-  --chart-4: oklch(0.72 0.14 285);
-  --chart-5: oklch(0.74 0.15 340);
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.723 0.219 149.579);
@@ -174,12 +176,16 @@
     @apply max-w-none text-sm leading-7 text-foreground;
   }
 
+  .project-docs-markdown > :first-child {
+    @apply mt-0;
+  }
+
   .project-docs-markdown h1 {
-    @apply mb-4 text-2xl font-semibold;
+    @apply mt-2 mb-3 text-2xl font-semibold tracking-tight text-balance;
   }
 
   .project-docs-markdown h2 {
-    @apply mt-6 mb-3 text-xl font-semibold;
+    @apply mt-8 mb-3 border-t pt-6 text-lg font-semibold tracking-tight;
   }
 
   .project-docs-markdown h3 {
@@ -187,20 +193,26 @@
   }
 
   .project-docs-markdown p {
-    @apply mb-3;
+    @apply mb-3 text-pretty;
   }
 
+  .project-docs-markdown strong {
+    @apply font-semibold;
+  }
+
+  /* Body-colored text keeps contrast in both themes; the brand color sits
+     in the underline. */
   .project-docs-markdown a {
-    @apply text-primary underline underline-offset-4;
+    @apply font-medium text-foreground underline decoration-primary decoration-2 underline-offset-4 hover:decoration-foreground;
   }
 
   .project-docs-markdown blockquote {
-    @apply border-l border-border pl-4 text-muted-foreground;
+    @apply my-4 rounded-lg border-l-4 border-primary bg-muted/50 px-4 py-2 text-muted-foreground;
   }
 
   .project-docs-markdown ul,
   .project-docs-markdown ol {
-    @apply mb-4;
+    @apply mb-4 space-y-1 pl-5;
   }
 
   .project-docs-markdown ul {
@@ -211,24 +223,49 @@
     @apply list-decimal;
   }
 
-  .project-docs-markdown li {
-    @apply ml-5;
+  .project-docs-markdown li::marker {
+    @apply text-muted-foreground;
+  }
+
+  .project-docs-markdown li > ul,
+  .project-docs-markdown li > ol {
+    @apply mt-1 mb-0;
+  }
+
+  .project-docs-markdown img {
+    @apply my-4 rounded-lg border;
   }
 
   .project-docs-markdown :not(pre) > code {
     @apply rounded-sm border border-border bg-muted px-1 text-foreground;
   }
 
+  /* Code blocks */
+  .project-docs-markdown .not-prose {
+    @apply my-4;
+  }
+
+  /* Tables fill the width; the wrapper scrolls them on narrow screens. */
+  .project-docs-markdown .docs-table-wrap {
+    @apply my-4 w-full overflow-x-auto rounded-lg border border-border;
+  }
+
   .project-docs-markdown table {
-    @apply my-4 block w-full overflow-x-auto rounded-lg border border-border text-sm;
+    @apply w-full text-sm;
+    border-collapse: separate;
+    border-spacing: 0;
   }
 
   .project-docs-markdown th {
-    @apply border border-border bg-muted p-2 text-left font-medium text-foreground;
+    @apply border-b border-border bg-muted px-3 py-2 text-left font-medium whitespace-nowrap text-foreground;
   }
 
   .project-docs-markdown td {
-    @apply border border-border p-2 text-foreground;
+    @apply border-b border-border px-3 py-2 align-top text-foreground;
+  }
+
+  .project-docs-markdown tr:last-child td {
+    @apply border-b-0;
   }
 
   .project-docs-markdown svg {
@@ -245,5 +282,18 @@
 
   .project-docs-markdown svg [fill]:not([fill="none"]) {
     fill: currentColor;
+  }
+}
+
+/* Respect the OS "reduce motion" setting for CSS animations and transitions
+   (dialogs, menus, sheets). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

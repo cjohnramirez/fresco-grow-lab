@@ -64,7 +64,7 @@ export function RainDashboardView({
         />
         <MetricCard
           icon={RadioIcon}
-          label="AP Status"
+          label={rain.dataSource === "ap" ? "AP Status" : "Source"}
           loading={rain.loading.initial || rain.loading.status}
           value={rain.connectionState === "connected" ? "Live" : "Local"}
           detail={`${rain.status?.clients ?? 0} AP clients, ${
@@ -97,7 +97,11 @@ export function RainDashboardView({
               <div>
                 <div className="text-sm font-medium">Connection</div>
                 <p className="text-sm text-muted-foreground wrap-break-word">
-                  {rain.apBaseUrl}
+                  {rain.dataSource === "ap"
+                    ? rain.apBaseUrl
+                    : rain.dataSource === "device"
+                      ? "USB serial"
+                      : "Simulated gauge"}
                 </p>
               </div>
               <RainGaugeStatusBadge state={rain.connectionState} />

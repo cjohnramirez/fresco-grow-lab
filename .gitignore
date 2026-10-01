@@ -4,6 +4,9 @@
 .vscode/launch.json
 .vscode/ipch
 
+# Firmware credentials (copy include/secrets.example.h)
+include/secrets.h
+
 web/.env*.local
 web/.next
 web/.vercel
@@ -12,3 +15,6 @@ web/coverage
 web/node_modules
 
 .agents
+.playwright-mcp
+supabase/.temp
+supabase/.branches

@@ -4,7 +4,7 @@ import { normalizeSupabaseRows } from "../../../lib/experiment/parser"
 import { createSupabaseServerClient, supabaseNotConfiguredResponse } from "../../../lib/supabase/server"
 
 export async function GET(request: Request) {
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient(request)
 
   if (!supabase) {
     return supabaseNotConfiguredResponse()

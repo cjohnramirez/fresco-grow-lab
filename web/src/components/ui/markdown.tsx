@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils"
 import { marked } from "marked"
 import { memo, useId, useMemo } from "react"
 import ReactMarkdown, { type Components } from "react-markdown"
-import remarkBreaks from "remark-breaks"
 import remarkGfm from "remark-gfm"
 import { CodeBlock, CodeBlockCode } from "./code-block"
 
@@ -24,7 +23,7 @@ function extractLanguage(className?: string): string {
   return match ? match[1] : "plaintext"
 }
 
-const INITIAL_COMPONENTS: Partial<Components> = {
+export const INITIAL_COMPONENTS: Partial<Components> = {
   code: function CodeComponent({ className, children, ...props }) {
     const isInline =
       !props.node?.position?.start.line ||
@@ -67,7 +66,8 @@ const MemoizedMarkdownBlock = memo(
   }) {
     return (
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkBreaks]}
+        // GitHub semantics: single newlines are soft wraps, not <br>.
+        remarkPlugins={[remarkGfm]}
         components={components}
       >
         {content}

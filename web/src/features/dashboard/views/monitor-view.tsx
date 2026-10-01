@@ -50,6 +50,36 @@ import {
   type NormalizedReading,
   type WateringStatus,
 } from "@/lib/experiment/types";
+import { BAG_IDS } from "@/features/dashboard/hooks/dashboard-constants";
+import type { TemperatureDataSource } from "@/features/telemetry/data-source";
+
+const FEED_COPY: Record<
+  TemperatureDataSource,
+  { title: string; description: string; footer: string; readings: string }
+> = {
+  simulated: {
+    title: "Simulated Feed",
+    description:
+      "A modelled grow bag uploads a new row every 10 seconds. Watering and weights you log stay in this browser.",
+    footer:
+      "Switch the data source to Supabase or USB Device in the header to use real sensors.",
+    readings: "Simulated Readings",
+  },
+  cloud: {
+    title: "Supabase Feed",
+    description: "Reads Supabase temperature rows one page at a time.",
+    footer:
+      "Configure Supabase environment variables before using live cloud data.",
+    readings: "Cloud Readings",
+  },
+  device: {
+    title: "USB Device Feed",
+    description:
+      "Rows streamed from a kit board over Web Serial. Watering and weights you log stay in this browser.",
+    footer: "Use Connect Hardware in the header to pick the board's serial port.",
+    readings: "USB Readings",
+  },
+};
 
 const readingDateFormatter = new Intl.DateTimeFormat("en-PH", {
   dateStyle: "short",
@@ -59,7 +89,9 @@ const readingDateFormatter = new Intl.DateTimeFormat("en-PH", {
 
 export function MonitorView({
   archiveIrrigationEvent,
+  bagId,
   cloudState,
+  dataSource,
   includeArchived,
   irrigationEvents,
   loadingState,
@@ -70,13 +102,16 @@ export function MonitorView({
   readingQuery,
   readings,
   refreshFromSupabase,
+  setBagId,
   setIncludeArchived,
   updateIrrigationEvent,
   updateReadingQuery,
   wateringStatus,
 }: {
   archiveIrrigationEvent: (id: string) => Promise<void>;
+  bagId: string;
   cloudState: CloudState;
+  dataSource: TemperatureDataSource;
   includeArchived: boolean;
   irrigationEvents: IrrigationEvent[];
   loadingState: DashboardLoadingState;
@@ -87,6 +122,7 @@ export function MonitorView({
   readingQuery: ReadingQuery;
   readings: NormalizedReading[];
   refreshFromSupabase: () => void;
+  setBagId: (bagId: string) => void;
   setIncludeArchived: (next: boolean) => void;
   updateIrrigationEvent: (
     id: string,
@@ -101,15 +137,14 @@ export function MonitorView({
   );
   const readingsBusy =
     loadingState.readingsLoading || loadingState.readingsRefreshing;
+  const copy = FEED_COPY[dataSource];
 
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Supabase Feed</CardTitle>
-          <CardDescription>
-            Reads Supabase temperature rows one page at a time.
-          </CardDescription>
+          <CardTitle>{copy.title}</CardTitle>
+          <CardDescription>{copy.description}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
@@ -125,14 +160,16 @@ export function MonitorView({
               )}
               {loadingState.cloudRefreshing ? "Refreshing..." : "Refresh"}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={loadSample}
-              disabled={loadingState.cloudRefreshing}
-            >
-              Load Sample
-            </Button>
+            {dataSource !== "simulated" && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={loadSample}
+                disabled={loadingState.cloudRefreshing}
+              >
+                Use Simulated Data
+              </Button>
+            )}
           </div>
           <Alert
             variant={cloudState.status === "error" ? "destructive" : undefined}
@@ -147,10 +184,7 @@ export function MonitorView({
           </Alert>
         </CardContent>
         <CardFooter>
-          <p className="text-sm text-muted-foreground">
-            Configure Supabase environment variables before using live cloud
-            data.
-          </p>
+          <p className="text-sm text-muted-foreground">{copy.footer}</p>
         </CardFooter>
       </Card>
 
@@ -158,10 +192,28 @@ export function MonitorView({
         <CardHeader>
           <CardTitle>Watering Controls</CardTitle>
           <CardDescription>
-            Log watering and 10-minute bag weights to Supabase.
+            Log watering and 10-minute bag weights
+            {dataSource === "cloud" ? " to Supabase" : " in this browser"}.
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
+        <CardContent className="flex flex-wrap items-center gap-2">
+          <Select
+            value={bagId}
+            onValueChange={(value) => value && setBagId(value)}
+          >
+            <SelectTrigger aria-label="Grow bag" className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {BAG_IDS.map((id) => (
+                  <SelectItem key={id} value={id}>
+                    {id.replace("bag-", "Bag ")}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
           <Button
             type="button"
             onClick={onLogWatering}
@@ -206,7 +258,7 @@ export function MonitorView({
         <CardHeader>
           <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <CardTitle>Cloud Readings</CardTitle>
+              <CardTitle>{copy.readings}</CardTitle>
               <CardDescription className="flex flex-wrap items-center gap-2 wrap-break-word">
                 {readingsBusy && <Spinner />}
                 Page {pagination.page} of {pageCount}; {readings.length} channel

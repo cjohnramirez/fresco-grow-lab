@@ -8,25 +8,31 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
   ),
-  title: "Fresco Temperature Dashboard",
-  description: "Local-first grow-bag thermal validation dashboard.",
+  title: "Fresco Telemetry",
+  description:
+    "Grow-bag temperature and rain gauge telemetry built for Fresco Greenovations Inc., an agritech startup in Cagayan de Oro City. Runs on simulated data or your own ESP32 sensors.",
+  authors: [{ name: "John Carl Ramirez" }],
+  creator: "John Carl Ramirez",
+  publisher: "Fresco Greenovations Inc.",
   openGraph: {
-    title: "Fresco Temperature Dashboard",
-    description: "Local-first grow-bag thermal validation dashboard.",
+    title: "Fresco Telemetry",
+    description:
+      "Grow-bag temperature and rain gauge telemetry built for Fresco Greenovations Inc., Cagayan de Oro City.",
     type: "website",
     images: [
       {
         url: "/screenshot.png",
         width: 1200,
         height: 630,
-        alt: "Fresco Temperature Dashboard",
+        alt: "Fresco Telemetry dashboard",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fresco Temperature Dashboard",
-    description: "Local-first grow-bag thermal validation dashboard.",
+    title: "Fresco Telemetry",
+    description:
+      "Grow-bag temperature and rain gauge telemetry built for Fresco Greenovations Inc., Cagayan de Oro City.",
     images: ["/screenshot.png"],
   },
 };

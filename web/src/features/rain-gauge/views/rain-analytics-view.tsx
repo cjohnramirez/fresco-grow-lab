@@ -35,6 +35,12 @@ import {
   RainRateChart,
   RainTotalsChart,
 } from "@/features/rain-gauge/components/rain-gauge-charts"
+import {
+  DailyTotalsCard,
+  IntensityCard,
+  RainEventsCard,
+  TipIntervalCard,
+} from "@/features/rain-gauge/components/rain-insights"
 import { formatNumber } from "@/features/rain-gauge/lib/format"
 import type { RainGaugeDashboardState } from "@/features/rain-gauge/hooks/use-rain-gauge-dashboard"
 
@@ -144,6 +150,7 @@ export function RainAnalyticsView({
               disabled={
                 rain.readings.length === 0 ||
                 rain.loading.sync ||
+                rain.dataSource === "simulated" ||
                 rain.syncState.status === "not_configured"
               }
             >
@@ -154,6 +161,16 @@ export function RainAnalyticsView({
               )}
               Sync To Supabase
             </Button>
+            {rain.queuedSessions > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void rain.retryQueuedSync()}
+                disabled={rain.loading.sync}
+              >
+                Retry Queued ({rain.queuedSessions})
+              </Button>
+            )}
           </div>
 
           {rain.syncState.status === "not_configured" && (
@@ -199,6 +216,19 @@ export function RainAnalyticsView({
             )}
           </CardContent>
         </Card>
+      </div>
+
+      <div className="flex flex-col gap-1 pt-2">
+        <h2 className="text-base font-semibold">Rain Patterns</h2>
+        <p className="text-sm text-muted-foreground">
+          Computed from every reading in the current session.
+        </p>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <RainEventsCard readings={rain.readings} />
+        <IntensityCard readings={rain.readings} />
+        <DailyTotalsCard summary={rain.summary} />
+        <TipIntervalCard summary={rain.summary} />
       </div>
 
       <Card className="min-w-0">

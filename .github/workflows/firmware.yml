@@ -1,0 +1,63 @@
+name: Firmware
+
+# Builds the credential-free kit firmware and publishes merged images to
+# web/public/firmware so the dashboard can flash them from the browser.
+# The classic nodemcu-32s / rain-gauge envs are compiled too, as a check.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Firmware version shown in the Flash tab
+        required: false
+        default: "1.0.0"
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/**"
+      - "platformio.ini"
+      - "scripts/package_firmware.py"
+      - ".github/workflows/firmware.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: firmware-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+
+      - name: Install PlatformIO and esptool
+        run: pip install --upgrade platformio esptool
+
+      - name: Build classic firmware (compile check, no secrets)
+        run: pio run -e nodemcu-32s -e rain-gauge
+
+      - name: Build kit firmware
+        run: pio run -e temperature-kit -e rain-gauge-kit
+
+      - name: Package merged images
+        run: python scripts/package_firmware.py --version "${{ inputs.version || '1.0.0' }}" --commit "${{ github.sha }}"
+
+      - name: Commit firmware to web/public/firmware
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore(firmware): publish kit images for ${{ github.sha }}"
+          file_pattern: "web/public/firmware/*"

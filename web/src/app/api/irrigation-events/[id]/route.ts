@@ -17,7 +17,7 @@ type RouteContext = {
 }
 
 export async function PATCH(request: Request, context: RouteContext) {
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient(request)
 
   if (!supabase) {
     return supabaseNotConfiguredResponse()
@@ -115,8 +115,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   })
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
-  const supabase = createSupabaseServerClient()
+export async function DELETE(request: Request, context: RouteContext) {
+  const supabase = createSupabaseServerClient(request)
 
   if (!supabase) {
     return supabaseNotConfiguredResponse()

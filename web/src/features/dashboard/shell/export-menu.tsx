@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import {
   DownloadIcon,
   DropletsIcon,
@@ -17,6 +18,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
@@ -42,15 +44,7 @@ import type {
   WeekAnalysisResult,
 } from "@/lib/experiment/types"
 
-export function ExportMenu({
-  cloudState,
-  eventsError,
-  irrigationEvents,
-  loadingState,
-  readings,
-  sessionId,
-  weekAnalysis,
-}: {
+export type ExportMenuProps = {
   cloudState: CloudState
   eventsError: unknown
   irrigationEvents: IrrigationEvent[]
@@ -58,37 +52,127 @@ export function ExportMenu({
   readings: NormalizedReading[]
   sessionId: string
   weekAnalysis: WeekAnalysisResult | null
-}) {
+}
+
+type ExportItem = {
+  id: string
+  label: string
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
+  disabled?: boolean
+  run: () => void
+}
+
+// Shared by the header Export button and the phone overflow menu.
+export function useTemperatureExports({
+  cloudState,
+  eventsError,
+  irrigationEvents,
+  loadingState,
+  readings,
+  sessionId,
+  weekAnalysis,
+}: ExportMenuProps) {
   const isPreparing =
     cloudState.status === "loading" ||
     loadingState.readingsLoading ||
     loadingState.eventsLoading
   const errorMessage = getExportErrorMessage(cloudState, eventsError)
 
+  const items: ExportItem[] = [
+    {
+      id: "readings",
+      label: "Current Readings Page",
+      icon: TableIcon,
+      run: () =>
+        handleCsvExport({
+          filename: `${sessionId}-current-temperature-page.csv`,
+          content: readingsToCsv(readings),
+          label: "Current readings page",
+        }),
+    },
+    {
+      id: "events",
+      label: "Active Irrigation Events",
+      icon: DropletsIcon,
+      run: () =>
+        handleCsvExport({
+          filename: `${sessionId}-irrigation-events.csv`,
+          content: irrigationEventsToCsv(irrigationEvents),
+          label: "Active irrigation events",
+        }),
+    },
+    {
+      id: "weights",
+      label: "Irrigation Weight Logs",
+      icon: ScaleIcon,
+      run: () =>
+        handleCsvExport({
+          filename: `${sessionId}-irrigation-weight-logs.csv`,
+          content: irrigationWeightLogsToCsv(irrigationEvents),
+          label: "Irrigation weight logs",
+        }),
+    },
+    {
+      id: "week",
+      label: "Full-Week Analysis",
+      icon: FileDownIcon,
+      disabled: !weekAnalysis,
+      run: () => {
+        if (!weekAnalysis) {
+          toast.message("Parse the full week before exporting analysis.")
+          return
+        }
+        handleCsvExport({
+          filename: `${sessionId}-full-week-analysis.csv`,
+          content: weekAnalysisToCsv(weekAnalysis),
+          label: "Full-week analysis",
+        })
+      },
+    },
+  ]
+
+  return { errorMessage, isPreparing, items }
+}
+
+export function ExportMenuItems({ items }: { items: ExportItem[] }) {
+  return items.map((item) => (
+    <DropdownMenuItem key={item.id} disabled={item.disabled} onClick={item.run}>
+      <item.icon aria-hidden="true" />
+      {item.label}
+      <DropdownMenuShortcut>.csv</DropdownMenuShortcut>
+    </DropdownMenuItem>
+  ))
+}
+
+export function ExportMenu({
+  compact = false,
+  ...props
+}: ExportMenuProps & {
+  // Icon-only trigger for narrower headers.
+  compact?: boolean
+}) {
+  const { errorMessage, isPreparing, items } = useTemperatureExports(props)
+
   if (isPreparing || errorMessage) {
+    const message = errorMessage ?? "Preparing CSV exports"
     return (
       <Tooltip>
         <TooltipTrigger
-          render={
-            <span
-              className="inline-flex"
-              tabIndex={0}
-              aria-label={errorMessage ?? "Preparing CSV exports"}
-            />
-          }
+          render={<span className="inline-flex" tabIndex={0} aria-label={message} />}
         >
           <Button
             type="button"
             variant="outline"
+            size={compact ? "icon" : "default"}
             disabled
-            aria-label={errorMessage ?? "Preparing CSV exports"}
+            aria-label={message}
           >
             {isPreparing ? (
-              <Spinner data-icon="inline-start" />
+              <Spinner data-icon={compact ? undefined : "inline-start"} />
             ) : (
-              <DownloadIcon data-icon="inline-start" />
+              <DownloadIcon data-icon={compact ? undefined : "inline-start"} />
             )}
-            {isPreparing ? "Preparing..." : "Export Unavailable"}
+            {!compact && (isPreparing ? "Preparing..." : "Export Unavailable")}
           </Button>
         </TooltipTrigger>
         <TooltipContent className="max-w-64 text-pretty">
@@ -99,80 +183,42 @@ export function ExportMenu({
     )
   }
 
+  const trigger = (
+    <DropdownMenuTrigger
+      render={
+        <Button
+          type="button"
+          variant="outline"
+          size={compact ? "icon" : "default"}
+          aria-label={compact ? "Export CSV" : undefined}
+        />
+      }
+    >
+      <DownloadIcon data-icon={compact ? undefined : "inline-start"} aria-hidden="true" />
+      {!compact && "Export"}
+    </DropdownMenuTrigger>
+  )
+
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button type="button" variant="outline" />}>
-        <DownloadIcon data-icon="inline-start" />
-        Export
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="center">
+      {compact ? (
+        <Tooltip>
+          <TooltipTrigger render={trigger} />
+          <TooltipContent>Export CSV</TooltipContent>
+        </Tooltip>
+      ) : (
+        trigger
+      )}
+      <DropdownMenuContent className="w-64" align="end">
         <DropdownMenuGroup>
           <DropdownMenuLabel>CSV Exports</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() =>
-              handleCsvExport({
-                filename: `${sessionId}-current-temperature-page.csv`,
-                content: readingsToCsv(readings),
-                label: "Current readings page",
-              })
-            }
-          >
-            <TableIcon />
-            Current Readings Page
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() =>
-              handleCsvExport({
-                filename: `${sessionId}-irrigation-events.csv`,
-                content: irrigationEventsToCsv(irrigationEvents),
-                label: "Active irrigation events",
-              })
-            }
-          >
-            <DropletsIcon />
-            Active Irrigation Events
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() =>
-              handleCsvExport({
-                filename: `${sessionId}-irrigation-weight-logs.csv`,
-                content: irrigationWeightLogsToCsv(irrigationEvents),
-                label: "Irrigation weight logs",
-              })
-            }
-          >
-            <ScaleIcon />
-            Irrigation Weight Logs
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={!weekAnalysis}
-            onClick={() => {
-              if (!weekAnalysis) {
-                toast.message("Parse the full week before exporting analysis.")
-                return
-              }
-
-              handleCsvExport({
-                filename: `${sessionId}-full-week-analysis.csv`,
-                content: weekAnalysisToCsv(weekAnalysis),
-                label: "Full-week analysis",
-              })
-            }}
-          >
-            <FileDownIcon />
-            Full-Week Analysis
-          </DropdownMenuItem>
+          <ExportMenuItems items={items} />
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() =>
-            toast.message(
-              "The readings export uses the current table page. Use Parse Full Week for complete metrics."
-            )
-          }
-        >
-          Export Scope
-        </DropdownMenuItem>
+        <p className="px-2 py-1.5 text-xs text-muted-foreground">
+          Readings export the current table page. Use Parse Full Week for
+          complete metrics.
+        </p>
       </DropdownMenuContent>
     </DropdownMenu>
   )

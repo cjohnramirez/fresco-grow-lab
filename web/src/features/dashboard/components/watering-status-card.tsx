@@ -68,7 +68,7 @@ export function WateringStatusCard({
         <p className="text-sm text-muted-foreground">{detail}</p>
         {status.state !== "idle" && (
           <div className="flex flex-col gap-2">
-            <Progress value={progress} />
+            <Progress value={progress} aria-label="Checkpoints weighed" />
             <div className="text-xs text-muted-foreground">
               {status.dueSlotAt
                 ? `Due ${formatManilaDateTime(status.dueSlotAt)}`

@@ -1,35 +1,36 @@
 import path from "node:path"
 
-export type ProjectDocSlug =
-  | "readme"
-  | "api"
-  | "data-contract"
-  | "frontend-dashboard"
-  | "growbag-temp-project"
-  | "rain-gauge-project"
+export type ProjectDocSlug = "readme" | "hardware" | "data" | "experiments"
 
 export const PROJECT_DOCS: Array<{
   slug: ProjectDocSlug
   title: string
+  description: string
   path: string
 }> = [
-  { slug: "readme", title: "README", path: "README.md" },
-  { slug: "api", title: "API Reference", path: "docs/api.md" },
-  { slug: "data-contract", title: "Data Contract", path: "docs/data-contract.md" },
   {
-    slug: "frontend-dashboard",
-    title: "Frontend Dashboard",
-    path: "docs/frontend-dashboard.md",
+    slug: "readme",
+    title: "Overview",
+    description: "What it is, quick start, credits",
+    path: "README.md",
   },
   {
-    slug: "growbag-temp-project",
-    title: "Grow Bag Temperature",
-    path: "docs/growbag-temp-project.md",
+    slug: "hardware",
+    title: "Hardware",
+    description: "Wiring, firmware, flashing",
+    path: "docs/hardware.md",
   },
   {
-    slug: "rain-gauge-project",
-    title: "Rain Gauge Project",
-    path: "docs/rain-gauge-project.md",
+    slug: "data",
+    title: "Data",
+    description: "Supabase, keys, packets, API",
+    path: "docs/data.md",
+  },
+  {
+    slug: "experiments",
+    title: "Experiments",
+    description: "What is measured and why",
+    path: "docs/experiments.md",
   },
 ]
 
@@ -43,5 +44,7 @@ export function projectDocPath(slug: string) {
     return null
   }
 
-  return path.resolve(process.cwd(), "..", doc.path)
+  // Allowlisted files are bundled via outputFileTracingIncludes in
+  // next.config.ts, so the tracer does not need to follow this path.
+  return path.resolve(/*turbopackIgnore: true*/ process.cwd(), "..", doc.path)
 }

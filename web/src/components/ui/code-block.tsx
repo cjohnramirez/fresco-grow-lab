@@ -42,7 +42,9 @@ function CodeBlockCode({
   const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null)
   const { resolvedTheme } = useTheme()
   const effectiveTheme =
-    theme ?? (resolvedTheme === "dark" ? "github-dark" : "github-light")
+    theme ??
+    // High-contrast variants keep comments/punctuation above 4.5:1.
+    (resolvedTheme === "dark" ? "github-dark-high-contrast" : "github-light-high-contrast")
 
   useEffect(() => {
     async function highlight() {

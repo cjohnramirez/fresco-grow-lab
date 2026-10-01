@@ -7,7 +7,7 @@
 // counted edges and physical tips = edges / 2. The ISR only touches volatile
 // counters -- all rainfall/rate math and publishing happen in loop().
 //
-// Endpoints (see docs/rain-gauge-project.md and docs/api.md):
+// Endpoints (see docs/hardware.md and docs/data.md):
 //   GET  /             -> plain reference UI (placeholder for the frontend team)
 //   GET  /api/status   -> device + calibration info
 //   GET  /api/readings -> latest tip/rainfall/rate snapshot
@@ -24,6 +24,13 @@
 #include <math.h>
 
 #include "RainGaugeConfig.h"
+
+#if FRESCO_KIT
+// Kit build: also streams every reading as a JSON line over USB and answers
+// the dashboard's info/config commands (see FrescoKit.h).
+#include "FrescoKit.h"
+static const char* KIT_FIRMWARE = "fresco-rain-gauge-kit";
+#endif
 
 // --- Edge counting (shared with the ISR) -------------------------------------
 
@@ -382,7 +389,9 @@ static const char INDEX_HTML[] PROGMEM = R"RAINHTML(<!doctype html>
 // --- HTTP handlers -----------------------------------------------------------
 
 static void handleRoot(AsyncWebServerRequest* request) {
-  request->send_P(200, "text/html; charset=utf-8", INDEX_HTML);
+  // ESP32 flash is memory-mapped, so the PROGMEM page can be sent directly
+  // (send_P is deprecated in ESPAsyncWebServer 3.x).
+  request->send(200, "text/html; charset=utf-8", INDEX_HTML);
 }
 
 static void handleStatus(AsyncWebServerRequest* request) {
@@ -423,8 +432,14 @@ static void handleNotFound(AsyncWebServerRequest* request) {
 // --- Arduino entry points ----------------------------------------------------
 
 void setup() {
+#if FRESCO_KIT
+  Serial.setRxBufferSize(1024);
+#endif
   Serial.begin(RAIN_GAUGE_BAUD_RATE);
   delay(250);
+#if FRESCO_KIT
+  fresco_kit::load();
+#endif
 
   // GPIO 34 is input-only; INPUT_PULLUP has no effect here, the HW-477 module's
   // onboard pull-up holds the idle-HIGH level.
@@ -463,10 +478,19 @@ void setup() {
 
   latestReadingJson = buildReadingJson(computeReading(publishSeq));
   Serial.println("HTTP server + SSE ready. Monitoring for tips...");
+#if FRESCO_KIT
+  fresco_kit::sendInfo(KIT_FIRMWARE);
+#endif
 }
 
 void loop() {
   const unsigned long now = millis();
+#if FRESCO_KIT
+  // The rain gauge hosts its own AP, so only the device ID from a config
+  // command matters here; Wi-Fi/Supabase fields are stored but unused.
+  fresco_kit::poll(KIT_FIRMWARE);
+  fresco_kit::configChanged = false;
+#endif
   if (now - lastPublishMs < RAIN_GAUGE_PUBLISH_INTERVAL_MS) {
     return;
   }
@@ -485,6 +509,10 @@ void loop() {
   if (events.count() > 0) {
     events.send(latestReadingJson.c_str(), "reading", now);
   }
+
+#if FRESCO_KIT
+  Serial.println(latestReadingJson);
+#endif
 
   if (edges != lastPublishedEdges) {
     Serial.print("Edges: ");

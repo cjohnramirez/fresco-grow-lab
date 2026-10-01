@@ -10,7 +10,7 @@ import {
   DatabaseIcon,
   FlaskConicalIcon,
   GaugeIcon,
-  RefreshCwIcon,
+  SproutIcon,
   ThermometerIcon,
 } from "lucide-react"
 
@@ -39,9 +39,8 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar"
-import { Spinner } from "@/components/ui/spinner"
 import {
   Tooltip,
   TooltipContent,
@@ -55,17 +54,17 @@ import { AnalyticsView } from "@/features/dashboard/views/analytics-view"
 import { DashboardView } from "@/features/dashboard/views/dashboard-view"
 import { MonitorView } from "@/features/dashboard/views/monitor-view"
 import { useFrescoDashboard } from "@/features/dashboard/hooks/use-fresco-dashboard"
-import { CloudBadge } from "@/features/dashboard/shell/cloud-badge"
-import { ExportMenu } from "@/features/dashboard/shell/export-menu"
 import { ModeToggle } from "@/features/dashboard/shell/mode-toggle"
 import type { View } from "@/features/dashboard/lib/dashboard-types"
 import { ProjectDocsView } from "@/features/project-docs/views/project-docs-view"
 import { useProjectDocs } from "@/features/project-docs/hooks/use-project-docs"
 import { RainAnalyticsView } from "@/features/rain-gauge/views/rain-analytics-view"
 import { RainDashboardView } from "@/features/rain-gauge/views/rain-dashboard-view"
-import { RainGaugeStatusBadge } from "@/features/rain-gauge/components/rain-gauge-status-badge"
 import { RainMonitorView } from "@/features/rain-gauge/views/rain-monitor-view"
 import { useRainGaugeDashboard } from "@/features/rain-gauge/hooks/use-rain-gauge-dashboard"
+import { ConnectHardwareDialog } from "@/features/hardware/connect-hardware-dialog"
+import { DashboardHeader } from "@/features/app-shell/dashboard-header"
+import { FrescoSiteLink } from "@/features/app-shell/fresco-site-link"
 
 type DashboardKind = "temperature" | "rain-gauge"
 type Surface = "dashboard" | "docs"
@@ -114,13 +113,13 @@ function DashboardSwitcher({
 
   return (
     <SidebarMenu>
-      <SidebarMenuItem>
+      <SidebarMenuItem className="flex items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
               <SidebarMenuButton
                 size="lg"
-                className="data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
+                className="min-w-0 flex-1 data-popup-open:bg-sidebar-accent data-popup-open:text-sidebar-accent-foreground"
               />
             }
           >
@@ -128,7 +127,7 @@ function DashboardSwitcher({
               <ActiveDashboardIcon aria-hidden="true" />
             </div>
             <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">
+              <span className="truncate text-[13px] font-semibold tracking-tight">
                 Fresco Greenovations
               </span>
               <span className="truncate text-xs text-muted-foreground">
@@ -160,6 +159,7 @@ function DashboardSwitcher({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        <FrescoSiteLink className="group-data-[collapsible=icon]:hidden" />
       </SidebarMenuItem>
     </SidebarMenu>
   )
@@ -174,6 +174,8 @@ function MainNavigation({
   surface: Surface
   onSelect: (view: View) => void
 }) {
+  const { setOpenMobile } = useSidebar()
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Views</SidebarGroupLabel>
@@ -184,7 +186,11 @@ function MainNavigation({
               <SidebarMenuButton
                 isActive={surface === "dashboard" && activeView === item.id}
                 tooltip={item.label}
-                onClick={() => onSelect(item.id)}
+                onClick={() => {
+                  onSelect(item.id)
+                  // On phones the sidebar is a sheet; close it after navigating.
+                  setOpenMobile(false)
+                }}
               >
                 <item.icon aria-hidden="true" />
                 <span>{item.label}</span>
@@ -227,6 +233,27 @@ function ProjectDocumentation({
   )
 }
 
+function FrescoCredit({ onOpen }: { onOpen: () => void }) {
+  return (
+    <div className="flex items-start gap-1 group-data-[collapsible=icon]:hidden">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label="About this project: built for Fresco Greenovations Inc., an agritech startup in Cagayan de Oro City"
+        className="flex min-w-0 flex-1 items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+      >
+        <SproutIcon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+        <span>
+          Built for{" "}
+          <span className="font-medium text-foreground">Fresco Greenovations Inc.</span>
+          , an agritech startup in Cagayan de Oro City
+        </span>
+      </button>
+      <FrescoSiteLink className="mt-1" />
+    </div>
+  )
+}
+
 function SessionSummary({
   activeDashboard,
   rain,
@@ -263,16 +290,23 @@ function SessionSummary({
 }
 
 export function FrescoAppShell() {
-  const temperature = useFrescoDashboard()
-  const rain = useRainGaugeDashboard()
-  const docs = useProjectDocs()
   const [activeDashboard, setActiveDashboard] =
     React.useState<DashboardKind>("temperature")
   const [surface, setSurface] = React.useState<Surface>("dashboard")
+  // Only the visible dashboard subscribes to its live stream, so a simulated
+  // rain gauge ticking in the background never re-renders the temperature view.
+  const temperature = useFrescoDashboard({
+    live: surface === "dashboard" && activeDashboard === "temperature",
+  })
+  const rain = useRainGaugeDashboard({
+    live: surface === "dashboard" && activeDashboard === "rain-gauge",
+  })
+  const docs = useProjectDocs()
   const [activeView, setActiveViewState] = React.useState<View>("dashboard")
   const [wateringDialogOpen, setWateringDialogOpen] = React.useState(false)
   const [wateringDialogKey, setWateringDialogKey] = React.useState(0)
   const [weightDialogOpen, setWeightDialogOpen] = React.useState(false)
+  const [hardwareDialogOpen, setHardwareDialogOpen] = React.useState(false)
 
   const openWateringDialog = React.useCallback(() => {
     setWateringDialogKey(Date.now())
@@ -303,15 +337,39 @@ export function FrescoAppShell() {
     [activeDashboard, temperature]
   )
 
+  const useDeviceStream = React.useCallback(
+    (dashboard: DashboardKind) => {
+      selectDashboard(dashboard)
+      if (dashboard === "temperature") {
+        temperature.setDataSource("device")
+      } else {
+        rain.setDataSource("device")
+      }
+    },
+    [rain, selectDashboard, temperature]
+  )
+
   const title =
     surface === "docs"
       ? "Project Docs"
       : activeDashboard === "temperature"
         ? "Temperature Dashboard"
         : "Rain Gauge Dashboard"
+  const shortTitle =
+    surface === "docs"
+      ? "Docs"
+      : activeDashboard === "temperature"
+        ? "Temperature"
+        : "Rain Gauge"
 
   return (
     <SidebarProvider>
+      <a
+        href="#main-content"
+        className="sr-only z-50 rounded-md bg-background px-3 py-2 text-sm font-medium shadow focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:ring-3 focus:ring-ring/50"
+      >
+        Skip to content
+      </a>
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <DashboardSwitcher
@@ -320,23 +378,28 @@ export function FrescoAppShell() {
           />
         </SidebarHeader>
         <SidebarContent>
-          <MainNavigation
-            activeView={activeView}
-            surface={surface}
-            onSelect={setActiveView}
-          />
-          <ProjectDocumentation
-            docs={docs}
-            surface={surface}
-            onOpenDoc={openProjectDoc}
-          />
-          <SessionSummary
-            activeDashboard={activeDashboard}
-            rain={rain}
-            temperature={temperature}
-          />
+          <nav aria-label="Main" className="flex flex-col gap-2">
+            <MainNavigation
+              activeView={activeView}
+              surface={surface}
+              onSelect={setActiveView}
+            />
+            <ProjectDocumentation
+              docs={docs}
+              surface={surface}
+              onOpenDoc={openProjectDoc}
+            />
+          </nav>
+          <section aria-label="Session">
+            <SessionSummary
+              activeDashboard={activeDashboard}
+              rain={rain}
+              temperature={temperature}
+            />
+          </section>
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter role="region" aria-label="About and preferences">
+          <FrescoCredit onOpen={() => openProjectDoc("readme")} />
           <div className="flex items-center justify-between px-2 py-1">
             <ModeToggle />
             {activeDashboard === "temperature" && (
@@ -363,46 +426,23 @@ export function FrescoAppShell() {
       </Sidebar>
 
       <SidebarInset className="min-w-0 overflow-hidden">
-        <header className="flex min-h-14 flex-col items-stretch gap-2 border-b px-3 py-2 sm:flex-row sm:items-center sm:justify-between sm:px-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <SidebarTrigger />
-            <h1 className="truncate text-base font-semibold">{title}</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {surface === "dashboard" && activeDashboard === "temperature" && (
-              <>
-                <CloudBadge state={temperature.cloudState} />
-                <ExportMenu
-                  cloudState={temperature.cloudState}
-                  eventsError={temperature.eventsError}
-                  irrigationEvents={temperature.irrigationEvents}
-                  loadingState={temperature.loadingState}
-                  readings={temperature.readings}
-                  sessionId={temperature.sessionId}
-                  weekAnalysis={temperature.weekAnalysis}
-                />
-                <Button
-                  type="button"
-                  onClick={temperature.refreshFromSupabase}
-                  disabled={temperature.loadingState.cloudRefreshing}
-                >
-                  {temperature.loadingState.cloudRefreshing ? (
-                    <Spinner data-icon="inline-start" />
-                  ) : (
-                    <RefreshCwIcon data-icon="inline-start" />
-                  )}
-                  {temperature.loadingState.cloudRefreshing ? "Refreshing..." : "Refresh"}
-                </Button>
-              </>
-            )}
-            {surface === "dashboard" && activeDashboard === "rain-gauge" && (
-              <RainGaugeStatusBadge state={rain.connectionState} />
-            )}
-          </div>
-        </header>
+        <DashboardHeader
+          activeDashboard={activeDashboard}
+          onConnectHardware={() => setHardwareDialogOpen(true)}
+          rain={rain}
+          shortTitle={shortTitle}
+          surface={surface}
+          temperature={temperature}
+          title={title}
+        />
 
         <ScrollArea className="min-h-0 flex-1">
-          <div className="min-w-0 overflow-x-hidden p-3 sm:p-4">
+          {/* SidebarInset is already the page's <main>; this is the skip target. */}
+          <div
+            id="main-content"
+            tabIndex={-1}
+            className="min-w-0 overflow-x-hidden p-3 outline-none sm:p-4"
+          >
             {surface === "docs" ? (
               <ProjectDocsView docs={docs} />
             ) : activeDashboard === "temperature" ? (
@@ -427,7 +467,9 @@ export function FrescoAppShell() {
                 {activeView === "monitor" && (
                   <MonitorView
                     archiveIrrigationEvent={temperature.archiveIrrigationEvent}
+                    bagId={temperature.bagId}
                     cloudState={temperature.cloudState}
+                    dataSource={temperature.dataSource}
                     includeArchived={temperature.includeArchived}
                     irrigationEvents={temperature.irrigationEvents}
                     loadingState={temperature.loadingState}
@@ -438,6 +480,7 @@ export function FrescoAppShell() {
                     readingQuery={temperature.readingQuery}
                     readings={temperature.readings}
                     refreshFromSupabase={temperature.refreshFromSupabase}
+                    setBagId={temperature.setBagId}
                     setIncludeArchived={temperature.setIncludeArchived}
                     updateIrrigationEvent={temperature.updateIrrigationEvent}
                     updateReadingQuery={temperature.updateReadingQuery}
@@ -447,6 +490,10 @@ export function FrescoAppShell() {
                 {activeView === "analytics" && (
                   <AnalyticsView
                     chartRange={temperature.chartRange}
+                    irrigationEvents={temperature.irrigationEvents}
+                    readings={temperature.readings}
+                    weekLoading={temperature.weekLoading}
+                    weekSeries={temperature.weekSeries}
                     loadingState={temperature.loadingState}
                     onChartRangeChange={temperature.setChartRange}
                     runWeekAnalysis={temperature.runWeekAnalysis}
@@ -488,6 +535,15 @@ export function FrescoAppShell() {
         open={weightDialogOpen}
         onOpenChange={setWeightDialogOpen}
         onSubmit={temperature.updateIrrigationEvent}
+      />
+      <ConnectHardwareDialog
+        open={hardwareDialogOpen}
+        onOpenChange={setHardwareDialogOpen}
+        onUseCloud={() => {
+          selectDashboard("temperature")
+          temperature.setDataSource("cloud")
+        }}
+        onUseStream={useDeviceStream}
       />
     </SidebarProvider>
   )

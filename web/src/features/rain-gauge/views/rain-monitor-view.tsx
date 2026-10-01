@@ -39,55 +39,75 @@ import { RainGaugeStatusBadge } from "@/features/rain-gauge/components/rain-gaug
 import { formatDateTime, formatNumber } from "@/features/rain-gauge/lib/format"
 import type { RainGaugeDashboardState } from "@/features/rain-gauge/hooks/use-rain-gauge-dashboard"
 
+const SOURCE_COPY = {
+  simulated: {
+    title: "Simulated Gauge",
+    description:
+      "A modelled tipping-bucket gauge publishes a packet every 3 seconds. Disconnect pauses it; Reset Session zeroes the counters.",
+  },
+  ap: {
+    title: "Access Point",
+    description: "Connect to the ESP32 rain gauge through the local Next.js proxy.",
+  },
+  device: {
+    title: "USB Device",
+    description:
+      "Streams rain packets from kit firmware over Web Serial. Open Connect Hardware to pick the port first.",
+  },
+} as const
+
 export function RainMonitorView({
   rain,
 }: {
   rain: RainGaugeDashboardState
 }) {
+  const copy = SOURCE_COPY[rain.dataSource]
+
   return (
     <div className="flex min-w-0 flex-col gap-4">
       <Card>
         <CardHeader>
           <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0">
-              <CardTitle>Access Point</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Connect to the ESP32 rain gauge through the local Next.js proxy.
-              </p>
+              <CardTitle>{copy.title}</CardTitle>
+              <p className="text-sm text-muted-foreground">{copy.description}</p>
             </div>
             <RainGaugeStatusBadge state={rain.connectionState} />
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="rain-ap-url">AP URL</FieldLabel>
-              <InputGroup>
-                <InputGroupInput
-                  id="rain-ap-url"
-                  name="rain-ap-url"
-                  type="url"
-                  inputMode="url"
-                  autoComplete="off"
-                  value={rain.apBaseUrl}
-                  onChange={(event) => rain.setApBaseUrl(event.target.value)}
-                />
-                <InputGroupAddon align="inline-end">
-                  <InputGroupButton
-                    aria-label="Refresh rain gauge status"
-                    disabled={rain.loading.status}
-                    onClick={() => rain.refreshStatus()}
-                    size="icon-xs"
-                  >
-                    {rain.loading.status ? <Spinner /> : <RefreshCwIcon />}
-                  </InputGroupButton>
-                </InputGroupAddon>
-              </InputGroup>
-              <FieldDescription>
-                Default firmware AP address is http://192.168.4.1.
-              </FieldDescription>
-            </Field>
-          </FieldGroup>
+          {rain.dataSource === "ap" && (
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor="rain-ap-url">AP URL</FieldLabel>
+                <InputGroup>
+                  <InputGroupInput
+                    id="rain-ap-url"
+                    name="rain-ap-url"
+                    type="url"
+                    inputMode="url"
+                    autoComplete="off"
+                    value={rain.apBaseUrl}
+                    onChange={(event) => rain.setApBaseUrl(event.target.value)}
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton
+                      aria-label="Refresh rain gauge status"
+                      disabled={rain.loading.status}
+                      onClick={() => rain.refreshStatus()}
+                      size="icon-xs"
+                    >
+                      {rain.loading.status ? <Spinner /> : <RefreshCwIcon />}
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                </InputGroup>
+                <FieldDescription>
+                  Default firmware AP address is http://192.168.4.1. This only
+                  works when the dashboard runs on your own computer.
+                </FieldDescription>
+              </Field>
+            </FieldGroup>
+          )}
 
           <div className="flex flex-wrap items-center gap-2">
             <Button

@@ -3,16 +3,17 @@ import type {
   ReadingQuery,
   ReadingsResponse,
 } from "@/features/dashboard/lib/dashboard-types"
-import {
-  sampleSupabaseRows,
-} from "@/lib/experiment/sample-data"
+import { customSupabaseHeaders } from "@/features/hardware/custom-supabase"
 import { toManilaDatetimeLocalValue } from "@/lib/experiment/irrigation"
 import type { ChartRange } from "@/lib/experiment/types"
 
 const WEEK_MS = 7 * 24 * 60 * 60_000
 
 export async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url, { cache: "no-store" })
+  const response = await fetch(url, {
+    cache: "no-store",
+    headers: customSupabaseHeaders(),
+  })
   const payload = (await response.json()) as T & { message?: string }
 
   if (!response.ok) {
@@ -27,6 +28,7 @@ export async function sendJson<T>(url: string, init: RequestInit): Promise<T> {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...customSupabaseHeaders(),
       ...(init.headers ?? {}),
     },
   })
@@ -44,14 +46,14 @@ export async function sendJson<T>(url: string, init: RequestInit): Promise<T> {
 
 export function buildReadingsKey({
   readingQuery,
-  sampleMode,
+  localMode,
   sessionId,
 }: {
   readingQuery: ReadingQuery
-  sampleMode: boolean
+  localMode: boolean
   sessionId: string
 }) {
-  if (sampleMode) {
+  if (localMode) {
     return null
   }
 
@@ -67,13 +69,13 @@ export function buildReadingsKey({
 export function buildEventsKey({
   bagId,
   includeArchived,
-  sampleMode,
+  localMode,
 }: {
   bagId: string
   includeArchived: boolean
-  sampleMode: boolean
+  localMode: boolean
 }) {
-  if (sampleMode) {
+  if (localMode) {
     return null
   }
 
@@ -86,13 +88,13 @@ export function buildEventsKey({
 export function buildSummaryKey({
   bagId,
   chartRange,
-  sampleMode,
+  localMode,
 }: {
   bagId: string
   chartRange: ChartRange
-  sampleMode: boolean
+  localMode: boolean
 }) {
-  if (sampleMode) {
+  if (localMode) {
     return null
   }
 
@@ -116,22 +118,11 @@ export function nextCloudState({
   data,
   error,
   isLoading,
-  sampleMode,
 }: {
   data?: ReadingsResponse
   error: unknown
   isLoading: boolean
-  sampleMode: boolean
 }): CloudState {
-  if (sampleMode) {
-    return {
-      status: "ready",
-      message: "Sample data loaded",
-      rowCount: sampleSupabaseRows.length,
-      latestFetchAt: new Date().toISOString(),
-    }
-  }
-
   if (error) {
     return {
       status: "error",

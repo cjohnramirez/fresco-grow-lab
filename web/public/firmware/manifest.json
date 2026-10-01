@@ -1,0 +1,33 @@
+{
+  "version": "1.0.0",
+  "builtAt": "2026-10-01T04:48:02+00:00",
+  "commit": "1baeba7884b792cb257b1abd52a7ce30a1456344",
+  "builds": [
+    {
+      "id": "temperature-kit",
+      "env": "temperature-kit",
+      "name": "Grow-bag temperature kit",
+      "description": "Five DS18B20 channels (GPIO 5, 4, 16, 17, 14).",
+      "chip": "ESP32",
+      "parts": [
+        {
+          "path": "temperature-kit.bin",
+          "offset": 0
+        }
+      ]
+    },
+    {
+      "id": "rain-gauge-kit",
+      "env": "rain-gauge-kit",
+      "name": "Rain gauge kit",
+      "description": "HW-477 tipping bucket on GPIO 34, plus its own Wi-Fi access point.",
+      "chip": "ESP32",
+      "parts": [
+        {
+          "path": "rain-gauge-kit.bin",
+          "offset": 0
+        }
+      ]
+    }
+  ]
+}

@@ -7,6 +7,7 @@ import type { ProjectDocSlug } from "@/lib/project-docs/docs"
 type DocMeta = {
   slug: ProjectDocSlug
   title: string
+  description: string
   path: string
 }
 

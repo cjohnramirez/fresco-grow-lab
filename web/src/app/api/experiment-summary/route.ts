@@ -39,7 +39,7 @@ function bucketFromUrl(url: URL, chartRange: ChartRange): BucketSize {
 }
 
 export async function GET(request: Request) {
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient(request)
 
   if (!supabase) {
     return supabaseNotConfiguredResponse()

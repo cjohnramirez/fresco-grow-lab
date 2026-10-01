@@ -9,7 +9,7 @@
 #endif
 
 // HW-477 hall-effect signal pin. GPIO 34 is input-only and relies on the
-// module's onboard pull-up (see docs/rain-gauge-project.md).
+// module's onboard pull-up (see docs/hardware.md).
 #ifndef RAIN_GAUGE_TIP_PIN
 #define RAIN_GAUGE_TIP_PIN 34
 #endif

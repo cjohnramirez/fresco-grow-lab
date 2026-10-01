@@ -12,7 +12,7 @@ import {
 import { createSupabaseServerClient, supabaseNotConfiguredResponse } from "@/lib/supabase/server"
 
 export async function GET(request: Request) {
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient(request)
 
   if (!supabase) {
     return supabaseNotConfiguredResponse()
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient(request)
 
   if (!supabase) {
     return supabaseNotConfiguredResponse()

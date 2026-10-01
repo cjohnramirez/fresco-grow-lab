@@ -11,7 +11,7 @@ import {
 } from "@/lib/supabase/server"
 
 export async function POST(request: Request) {
-  const supabase = createSupabaseServerClient()
+  const supabase = createSupabaseServerClient(request)
   if (!supabase) {
     return supabaseNotConfiguredResponse()
   }

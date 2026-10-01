@@ -3,6 +3,11 @@
 import * as React from "react"
 import { toast } from "sonner"
 
+import {
+  serialStore,
+  subscribeSerialRain,
+} from "@/features/hardware/serial-connection"
+import type { RainDataSource } from "@/features/telemetry/data-source"
 import { saveRainGaugeSession } from "@/lib/rain-gauge/storage"
 import type {
   RainGaugeConnectionState,
@@ -21,12 +26,15 @@ import {
 } from "./rain-gauge-api"
 import { SESSION_ID_KEY } from "./rain-gauge-constants"
 
-// Owns the live link to the AP: one-shot status/snapshot fetches, the SSE
-// subscription, and the firmware session reset. Reading appends and local
-// clearing are delegated to the readings hook via the passed callbacks.
+// Owns the live link to the gauge: one-shot status/snapshot fetches, the SSE
+// subscription to the AP, or the USB serial stream from kit firmware, plus
+// the firmware session reset. Reading appends and local clearing are
+// delegated to the readings hook via the passed callbacks. The simulated
+// source is handled by the dashboard hook and never reaches this one.
 export function useRainGaugeConnection({
   apBaseUrl,
   appendReading,
+  dataSource,
   resetReadings,
   session,
   setError,
@@ -34,6 +42,7 @@ export function useRainGaugeConnection({
 }: {
   apBaseUrl: string
   appendReading: (raw: string) => Promise<void>
+  dataSource: RainDataSource
   resetReadings: () => void
   session: RainGaugeSession
   setError: (message: string | null) => void
@@ -45,6 +54,7 @@ export function useRainGaugeConnection({
   const [loadingStatus, setLoadingStatus] = React.useState(false)
   const [loadingReset, setLoadingReset] = React.useState(false)
   const eventSourceRef = React.useRef<EventSource | null>(null)
+  const serialUnsubscribeRef = React.useRef<(() => void) | null>(null)
 
   const statusUrl = React.useMemo(() => buildStatusUrl(apBaseUrl), [apBaseUrl])
   const readingsUrl = React.useMemo(
@@ -76,13 +86,44 @@ export function useRainGaugeConnection({
   const disconnect = React.useCallback(() => {
     eventSourceRef.current?.close()
     eventSourceRef.current = null
+    serialUnsubscribeRef.current?.()
+    serialUnsubscribeRef.current = null
     setConnectionState("idle")
   }, [])
+
+  const connectSerialStream = React.useCallback(async () => {
+    if (serialStore.getSnapshot().status !== "connected") {
+      setConnectionState("error")
+      const message =
+        "Connect the rain gauge over USB first (Connect Hardware > Connect over USB)."
+      setError(message)
+      toast.error(message)
+      return
+    }
+    await saveRainGaugeSession({ ...session, source: "usb", apBaseUrl: "usb://serial" })
+    setSession((current) => ({ ...current, source: "usb", apBaseUrl: "usb://serial" }))
+    serialUnsubscribeRef.current = subscribeSerialRain((raw) => {
+      setConnectionState("connected")
+      appendReading(raw).catch((eventError) => {
+        setError(
+          eventError instanceof Error
+            ? eventError.message
+            : "Rain gauge reading could not be parsed."
+        )
+      })
+    })
+    setConnectionState("connecting")
+    toast.message("Listening for rain packets over USB")
+  }, [appendReading, session, setError, setSession])
 
   const connect = React.useCallback(async () => {
     disconnect()
     setConnectionState("connecting")
     setError(null)
+    if (dataSource === "device") {
+      await connectSerialStream()
+      return
+    }
     await saveRainGaugeSession(session)
 
     try {
@@ -119,6 +160,8 @@ export function useRainGaugeConnection({
     }
   }, [
     appendReading,
+    connectSerialStream,
+    dataSource,
     disconnect,
     eventsUrl,
     readingsUrl,
@@ -134,7 +177,11 @@ export function useRainGaugeConnection({
     setLoadingReset(true)
     try {
       disconnect()
-      await readJson(resetUrl, { method: "POST" })
+      // Kit firmware resets its counters on the next reboot; the AP firmware
+      // exposes an explicit reset endpoint.
+      if (dataSource === "ap") {
+        await readJson(resetUrl, { method: "POST" })
+      }
       const nextSession = createSession(apBaseUrl)
       writeLocalStorage(SESSION_ID_KEY, nextSession.id)
       setSession(nextSession)
@@ -149,7 +196,7 @@ export function useRainGaugeConnection({
     } finally {
       setLoadingReset(false)
     }
-  }, [apBaseUrl, disconnect, resetReadings, resetUrl, setError, setSession])
+  }, [apBaseUrl, dataSource, disconnect, resetReadings, resetUrl, setError, setSession])
 
   return {
     connect,

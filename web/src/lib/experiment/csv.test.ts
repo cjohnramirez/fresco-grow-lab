@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import {
+  csvFilename,
   downloadCsv,
   irrigationEventsToCsv,
   irrigationWeightLogsToCsv,
@@ -189,5 +190,13 @@ describe("csv export", () => {
 
     vi.runOnlyPendingTimers()
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:csv")
+  })
+
+  it("always produces a safe .csv filename", () => {
+    expect(csvFilename("session-supabase-irrigation-events.csv")).toBe(
+      "session-supabase-irrigation-events.csv"
+    )
+    expect(csvFilename("rain gauge: page 2")).toBe("rain-gauge-page-2.csv")
+    expect(csvFilename("")).toBe("export.csv")
   })
 })

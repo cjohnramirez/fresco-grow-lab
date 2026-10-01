@@ -9,6 +9,8 @@ import {
 
 import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
@@ -29,6 +31,8 @@ export function TemperatureChart({
         <XAxis dataKey="time" tickLine={false} axisLine={false} minTickGap={24} />
         <YAxis tickLine={false} axisLine={false} width={36} />
         <ChartTooltip content={<ChartTooltipContent />} />
+        {/* Names each probe so identity never relies on color alone. */}
+        <ChartLegend content={<ChartLegendContent />} />
         {markers.map((marker) => (
           <ReferenceLine
             key={marker.wateredAt}

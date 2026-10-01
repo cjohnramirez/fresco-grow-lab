@@ -1,4 +1,4 @@
-# Fresco Telemetry
+# Fresco Grow Lab
 
 Grow-bag temperature and rain gauge telemetry: ESP32 firmware (PlatformIO)
 plus a Next.js dashboard.
@@ -6,7 +6,7 @@ plus a Next.js dashboard.
 Built for **Fresco Greenovations Inc.** ([fresco.ph](https://fresco.ph/)), an
 agritech startup in Cagayan de Oro City, Philippines.
 
-![Fresco Telemetry dashboard](web/public/screenshot.png)
+![Fresco Grow Lab dashboard](web/public/screenshot.png)
 
 ## What it does
 

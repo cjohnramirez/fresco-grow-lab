@@ -2,7 +2,7 @@
 # Only the values that differ from the CLI defaults are set here.
 # `supabase link --project-ref <ref>` connects this folder to a hosted project.
 
-project_id = "fresco-telemetry"
+project_id = "fresco-grow-lab"
 
 [db]
 major_version = 17

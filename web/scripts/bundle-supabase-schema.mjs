@@ -24,7 +24,7 @@ export async function buildSchemaBundle() {
   )
 
   return [
-    "-- Fresco Telemetry schema (generated from supabase/migrations; do not edit).",
+    "-- Fresco Grow Lab schema (generated from supabase/migrations; do not edit).",
     "-- Paste into your Supabase project's SQL editor and run it once.",
     "-- Personal projects used with only a publishable key may also want",
     "-- supabase/snippets/visitor-project-writes.sql from the repository.",
